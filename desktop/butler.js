@@ -5,6 +5,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import WebSocket from 'ws';
+import DoubaoClient from './doubaoClient.js';
 
 // Enhanced Butler service with real Doubao API integration
 class ButlerService {
@@ -26,6 +27,9 @@ class ButlerService {
     // WebSocket 客户端及服务端主机
     this.ws = null;
     this.serverHost = this.config.serverHost || 'localhost';
+    this.doubaoClient = this.config.doubaoApiKey !== 'your-doubao-api-key-here'
+      ? new DoubaoClient(this.config.doubaoApiKey, this.config.doubaoEndpoint)
+      : null;
   }
 
   loadConfig() {
@@ -631,41 +635,20 @@ class ButlerService {
   }
 
   async callDoubaoAPI(agent, prompt, isTest = false) {
-    if (this.config.doubaoApiKey === 'your-doubao-api-key-here') {
+    if (!this.doubaoClient) {
       // Mock response for demo
       await this.delay(1000 + Math.random() * 2000);
       return this.generateMockResponse(agent, prompt);
     }
 
     try {
-      const response = await axios.post(
-        `${this.config.doubaoEndpoint}/chat/completions`,
-        {
-          model: agent.model,
-          messages: [
-            {
-              role: 'system',
-              content: agent.systemPrompt
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: agent.maxTokens || 2000,
-          temperature: agent.temperature || 0.3,
-          stream: false
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.config.doubaoApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: this.config.settings.agentResponseTimeout
-        }
-      );
-
-      return response.data.choices[0].message.content;
+      return await this.doubaoClient.chat({
+        model: agent.model,
+        systemPrompt: agent.systemPrompt,
+        userPrompt: prompt,
+        maxTokens: agent.maxTokens || 2000,
+        temperature: agent.temperature || 0.3
+      });
     } catch (error) {
       if (isTest) {
         throw error;
@@ -1106,6 +1089,10 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
 
   assessOutputQuality(output) {
     // Simple quality assessment based on content characteristics
+    if (!output || output.trim().length < 30) return 1;
+    const sensitive = ['违法', '违规', '敏感'];
+    if (sensitive.some(w => output.includes(w))) return 1;
+
     let score = 3; // Base score
     
     // Length check
