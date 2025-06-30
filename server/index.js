@@ -5,6 +5,7 @@ import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const app = express();
 const server = http.createServer(app);
@@ -13,10 +14,41 @@ const wss = new WebSocketServer({ server });
 app.use(cors());
 app.use(express.json());
 
+// 数据存储路径
+const dataDir = path.join(process.cwd(), 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+const agentsFile = path.join(dataDir, 'agents.json');
+const tasksFile = path.join(dataDir, 'tasks.json');
+
+// 持久化数据存储
+function saveData(file, data) {
+  try {
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+  } catch (error) {
+    console.error('保存数据失败:', error);
+  }
+}
+
+function loadData(file, defaultData = {}) {
+  try {
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, 'utf8'));
+    }
+  } catch (error) {
+    console.error('加载数据失败:', error);
+  }
+  return defaultData;
+}
+
 // Store connected clients and data
 const clients = new Map();
 const tasks = new Map();
 const agents = new Map();
+
+// 系统统计
 const systemStats = {
   totalTasks: 0,
   completedTasks: 0,
@@ -29,63 +61,278 @@ const systemStats = {
 // Butler WebSocket 连接（仅支持单实例）
 let butlerSocket = null;
 
-// Initialize enhanced demo agents
-const demoAgents = [
-  {
-    id: 'agent-1',
-    name: '代码助手',
-    role: '负责代码编写和调试',
-    status: 'idle',
-    capabilities: ['编程', '调试', '代码审查', '性能优化'],
-    model: 'doubao-pro-32k',
-    totalTasks: 15,
-    successRate: 92,
-    avgResponseTime: 2.3,
-    lastActivity: new Date().toISOString()
-  },
-  {
-    id: 'agent-2',
-    name: '文档助手',
-    role: '负责文档编写和整理',
-    status: 'idle',
-    capabilities: ['文档编写', '格式化', '翻译', '技术写作'],
-    model: 'doubao-pro-4k',
-    totalTasks: 23,
-    successRate: 96,
-    avgResponseTime: 1.8,
-    lastActivity: new Date().toISOString()
-  },
-  {
-    id: 'agent-3',
-    name: '分析助手',
-    role: '负责数据分析和报告',
-    status: 'idle',
-    capabilities: ['数据分析', '报告生成', '可视化', '统计分析'],
-    model: 'doubao-pro-128k',
-    totalTasks: 8,
-    successRate: 88,
-    avgResponseTime: 4.2,
-    lastActivity: new Date().toISOString()
-  },
-  {
-    id: 'agent-4',
-    name: '测试助手',
-    role: '负责软件测试和质量保证',
-    status: 'idle',
-    capabilities: ['测试设计', '自动化测试', '性能测试', '质量保证'],
-    model: 'doubao-pro-4k',
-    totalTasks: 12,
-    successRate: 94,
-    avgResponseTime: 3.1,
-    lastActivity: new Date().toISOString()
-  }
-];
+// 初始化数据
+function initializeData() {
+  // 加载任务数据
+  const savedTasks = loadData(tasksFile, {});
+  Object.entries(savedTasks).forEach(([key, value]) => {
+    tasks.set(key, value);
+  });
 
-demoAgents.forEach(agent => {
-  agents.set(agent.id, agent);
-  if (agent.status !== 'offline') {
-    systemStats.activeAgents++;
+  // 加载智能体数据
+  const savedAgents = loadData(agentsFile, {});
+  const agentKeys = Object.keys(savedAgents);
+  
+  if (agentKeys.length === 0) {
+    // 初始化默认智能体
+    const defaultAgents = [
+      {
+        id: 'agent-1',
+        name: '代码助手',
+        role: '负责代码编写和调试',
+        status: 'idle',
+        capabilities: ['编程', '调试', '代码审查', '性能优化'],
+        model: 'doubao-pro-32k',
+        systemPrompt: '你是一个专业的代码编写和调试专家，擅长多种编程语言和框架。请按照用户需求提供高质量的代码解决方案。',
+        maxTokens: 4000,
+        temperature: 0.1,
+        totalTasks: 0,
+        successRate: 100,
+        avgResponseTime: 2.3,
+        lastActivity: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        createdBy: 'system'
+      },
+      {
+        id: 'agent-2',
+        name: '文档助手',
+        role: '负责文档编写和整理',
+        status: 'idle',
+        capabilities: ['文档编写', '格式化', '翻译', '技术写作'],
+        model: 'doubao-pro-4k',
+        systemPrompt: '你是一个专业的技术文档编写专家，擅长将复杂的技术概念转化为清晰易懂的文档。',
+        maxTokens: 2000,
+        temperature: 0.3,
+        totalTasks: 0,
+        successRate: 100,
+        avgResponseTime: 1.8,
+        lastActivity: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        createdBy: 'system'
+      },
+      {
+        id: 'agent-3',
+        name: '分析助手',
+        role: '负责数据分析和报告',
+        status: 'idle',
+        capabilities: ['数据分析', '报告生成', '可视化', '统计分析'],
+        model: 'doubao-pro-128k',
+        systemPrompt: '你是一个专业的数据分析专家，擅长数据处理、分析和可视化报告生成。',
+        maxTokens: 6000,
+        temperature: 0.2,
+        totalTasks: 0,
+        successRate: 100,
+        avgResponseTime: 4.2,
+        lastActivity: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        createdBy: 'system'
+      }
+    ];
+
+    defaultAgents.forEach(agent => {
+      agents.set(agent.id, agent);
+      if (agent.status !== 'offline') {
+        systemStats.activeAgents++;
+      }
+    });
+
+    saveData(agentsFile, Object.fromEntries(agents));
+  } else {
+    Object.entries(savedAgents).forEach(([key, value]) => {
+      agents.set(key, value);
+      if (value.status !== 'offline') {
+        systemStats.activeAgents++;
+      }
+    });
   }
+
+  systemStats.totalTasks = tasks.size;
+  console.log(`✅ 数据初始化完成 - 智能体: ${agents.size}, 任务: ${tasks.size}`);
+}
+
+// REST API 路由
+
+// 获取所有智能体
+app.get('/api/agents', (req, res) => {
+  res.json({
+    success: true,
+    agents: Array.from(agents.values())
+  });
+});
+
+// 创建新智能体
+app.post('/api/agents', (req, res) => {
+  try {
+    const { name, role, model, capabilities, systemPrompt, maxTokens, temperature } = req.body;
+    
+    if (!name || !role) {
+      return res.status(400).json({
+        success: false,
+        error: '智能体名称和角色是必填项'
+      });
+    }
+
+    const agentId = uuidv4();
+    const newAgent = {
+      id: agentId,
+      name: name.trim(),
+      role: role.trim(),
+      model: model || 'doubao-pro-4k',
+      capabilities: Array.isArray(capabilities) ? capabilities : [],
+      systemPrompt: systemPrompt || `你是一个专业的${role}，请按照用户需求提供高质量的服务。`,
+      maxTokens: maxTokens || 2000,
+      temperature: temperature || 0.3,
+      status: 'idle',
+      totalTasks: 0,
+      successRate: 100,
+      avgResponseTime: 0,
+      lastActivity: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      createdBy: 'user'
+    };
+
+    agents.set(agentId, newAgent);
+    systemStats.activeAgents++;
+    
+    // 保存到文件
+    saveData(agentsFile, Object.fromEntries(agents));
+    
+    // 广播给所有客户端
+    broadcast({
+      type: 'agent_created',
+      agent: newAgent
+    });
+
+    res.json({
+      success: true,
+      agent: newAgent
+    });
+  } catch (error) {
+    console.error('创建智能体失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '创建智能体失败'
+    });
+  }
+});
+
+// 更新智能体
+app.put('/api/agents/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const agent = agents.get(id);
+    
+    if (!agent) {
+      return res.status(404).json({
+        success: false,
+        error: '智能体不存在'
+      });
+    }
+
+    const { name, role, model, capabilities, systemPrompt, maxTokens, temperature } = req.body;
+    
+    // 更新智能体信息
+    if (name) agent.name = name.trim();
+    if (role) agent.role = role.trim();
+    if (model) agent.model = model;
+    if (capabilities) agent.capabilities = Array.isArray(capabilities) ? capabilities : [];
+    if (systemPrompt) agent.systemPrompt = systemPrompt;
+    if (maxTokens) agent.maxTokens = maxTokens;
+    if (temperature !== undefined) agent.temperature = temperature;
+    
+    agent.lastActivity = new Date().toISOString();
+    
+    // 保存到文件
+    saveData(agentsFile, Object.fromEntries(agents));
+    
+    // 广播给所有客户端
+    broadcast({
+      type: 'agent_updated',
+      agent
+    });
+
+    res.json({
+      success: true,
+      agent
+    });
+  } catch (error) {
+    console.error('更新智能体失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '更新智能体失败'
+    });
+  }
+});
+
+// 删除智能体
+app.delete('/api/agents/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const agent = agents.get(id);
+    
+    if (!agent) {
+      return res.status(404).json({
+        success: false,
+        error: '智能体不存在'
+      });
+    }
+
+    // 检查是否有正在执行的任务
+    const hasActiveTasks = Array.from(tasks.values()).some(task => 
+      task.status === 'processing' && task.agents?.some(a => a.id === id)
+    );
+
+    if (hasActiveTasks) {
+      return res.status(400).json({
+        success: false,
+        error: '该智能体正在执行任务，无法删除'
+      });
+    }
+
+    agents.delete(id);
+    if (agent.status !== 'offline') {
+      systemStats.activeAgents--;
+    }
+    
+    // 保存到文件
+    saveData(agentsFile, Object.fromEntries(agents));
+    
+    // 广播给所有客户端
+    broadcast({
+      type: 'agent_deleted',
+      agentId: id
+    });
+
+    res.json({
+      success: true,
+      message: '智能体删除成功'
+    });
+  } catch (error) {
+    console.error('删除智能体失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '删除智能体失败'
+    });
+  }
+});
+
+// 获取系统统计
+app.get('/api/stats', (req, res) => {
+  res.json({
+    success: true,
+    stats: {
+      ...systemStats,
+      systemUptime: Math.floor((Date.now() - systemStats.systemUptime) / 1000)
+    }
+  });
+});
+
+// 获取所有任务
+app.get('/api/tasks', (req, res) => {
+  res.json({
+    success: true,
+    tasks: Array.from(tasks.values())
+  });
 });
 
 // WebSocket connection handling
@@ -93,7 +340,7 @@ wss.on('connection', (ws, req) => {
   const clientId = uuidv4();
   clients.set(clientId, ws);
   
-  console.log(`Client ${clientId} connected`);
+  console.log(`客户端 ${clientId} 已连接`);
   
   // Send initial data
   ws.send(JSON.stringify({
@@ -118,7 +365,13 @@ wss.on('connection', (ws, req) => {
         ws.isButler = true;
         butlerSocket = ws;
         console.log('🤖 Butler 已注册连接');
-        return; // 不继续向下分发
+        
+        // 发送当前智能体配置给Butler
+        ws.send(JSON.stringify({
+          type: 'agents_sync',
+          agents: Array.from(agents.values())
+        }));
+        return;
       }
 
       // 来自 Butler 的消息直接广播给客户端
@@ -129,13 +382,17 @@ wss.on('connection', (ws, req) => {
 
       handleMessage(clientId, message);
     } catch (error) {
-      console.error('Error parsing message:', error);
+      console.error('解析消息错误:', error);
     }
   });
 
   ws.on('close', () => {
     clients.delete(clientId);
-    console.log(`Client ${clientId} disconnected`);
+    if (ws.isButler) {
+      butlerSocket = null;
+      console.log('🤖 Butler 连接已断开');
+    }
+    console.log(`客户端 ${clientId} 已断开连接`);
   });
 });
 
@@ -175,6 +432,9 @@ function handleNewTask(taskData) {
   tasks.set(task.id, task);
   systemStats.totalTasks++;
   
+  // 保存任务数据
+  saveData(tasksFile, Object.fromEntries(tasks));
+  
   // Add initial log
   addTaskLog(task.id, 'info', '任务已创建，等待处理');
   
@@ -202,6 +462,7 @@ function handleTaskAction(taskId, action) {
       if (task.status === 'processing') {
         task.status = 'paused';
         addTaskLog(taskId, 'warning', '任务已暂停');
+        saveData(tasksFile, Object.fromEntries(tasks));
         broadcast({
           type: 'task_update',
           taskId,
@@ -213,6 +474,7 @@ function handleTaskAction(taskId, action) {
       if (task.status === 'paused') {
         task.status = 'processing';
         addTaskLog(taskId, 'info', '任务已恢复');
+        saveData(tasksFile, Object.fromEntries(tasks));
         broadcast({
           type: 'task_update',
           taskId,
@@ -225,6 +487,7 @@ function handleTaskAction(taskId, action) {
       task.summary = '任务已被用户取消';
       addTaskLog(taskId, 'error', '任务已取消');
       systemStats.failedTasks++;
+      saveData(tasksFile, Object.fromEntries(tasks));
       broadcast({
         type: 'task_update',
         taskId,
@@ -238,6 +501,7 @@ function handleTaskAction(taskId, action) {
         task.outputs = [];
         task.logs = [];
         addTaskLog(taskId, 'info', '任务已重启');
+        saveData(tasksFile, Object.fromEntries(tasks));
         broadcast({
           type: 'task_update',
           taskId,
@@ -298,6 +562,7 @@ async function processTask(taskId) {
     task.summary = '没有可用的智能体处理此任务';
     addTaskLog(taskId, 'error', '没有可用的智能体');
     systemStats.failedTasks++;
+    saveData(tasksFile, Object.fromEntries(tasks));
     
     broadcast({
       type: 'task_update',
@@ -387,6 +652,9 @@ async function processTask(taskId) {
       addTaskLog(taskId, 'success', `${outputAgent.name} 生成了新的输出`);
     }
     
+    // 保存任务进度
+    saveData(tasksFile, Object.fromEntries(tasks));
+    
     broadcast({
       type: 'task_update',
       taskId,
@@ -438,6 +706,10 @@ async function processTask(taskId) {
         taskAgent.endTime = new Date().toISOString();
         taskAgent.progress = 100;
       });
+      
+      // 保存最终任务状态
+      saveData(tasksFile, Object.fromEntries(tasks));
+      saveData(agentsFile, Object.fromEntries(agents));
     }
   }
 }
@@ -556,9 +828,14 @@ function sendStatsToClient(clientId) {
 
 function broadcast(message) {
   const messageStr = JSON.stringify(message);
-  clients.forEach((client) => {
+  clients.forEach((client, clientId) => {
     if (client.readyState === 1) { // WebSocket.OPEN
-      client.send(messageStr);
+      try {
+        client.send(messageStr);
+      } catch (error) {
+        console.error(`向客户端 ${clientId} 发送消息失败:`, error);
+        clients.delete(clientId);
+      }
     }
   });
 }
@@ -577,135 +854,65 @@ setInterval(() => {
   });
 }, 10000);
 
-// REST API endpoints
-app.get('/api/tasks', (req, res) => {
-  res.json(Array.from(tasks.values()));
-});
-
-app.get('/api/agents', (req, res) => {
-  res.json(Array.from(agents.values()));
-});
-
-app.get('/api/stats', (req, res) => {
-  res.json({
-    ...systemStats,
-    systemUptime: Math.floor((Date.now() - systemStats.systemUptime) / 1000)
-  });
-});
-
-app.post('/api/tasks', (req, res) => {
-  const { instruction, priority = 'medium', category = '通用' } = req.body;
-  
-  if (!instruction) {
-    return res.status(400).json({ error: 'Instruction is required' });
-  }
-
-  const task = {
-    id: uuidv4(),
-    instruction,
-    priority,
-    category,
-    timestamp: new Date().toISOString()
-  };
-
-  handleNewTask(task);
-  res.json({ success: true, taskId: task.id });
-});
-
 function handleButlerMessage(message) {
   switch (message.type) {
-    case 'task_update':
-      // 更新缓存的任务信息
-      if (tasks.has(message.taskId)) {
-        const task = tasks.get(message.taskId);
-        Object.assign(task, message.update);
+    case 'agent_created':
+      if (message.agent) {
+        agents.set(message.agent.id, message.agent);
+        systemStats.activeAgents++;
+        saveData(agentsFile, Object.fromEntries(agents));
+        broadcast({
+          type: 'agent_created',
+          agent: message.agent
+        });
       }
+      break;
+    
+    case 'agent_updated':
+      if (message.agent && agents.has(message.agent.id)) {
+        agents.set(message.agent.id, message.agent);
+        saveData(agentsFile, Object.fromEntries(agents));
+        broadcast({
+          type: 'agent_updated',
+          agent: message.agent
+        });
+      }
+      break;
+    
+    case 'agent_deleted':
+      if (message.agentId && agents.has(message.agentId)) {
+        const agent = agents.get(message.agentId);
+        agents.delete(message.agentId);
+        if (agent.status !== 'offline') {
+          systemStats.activeAgents--;
+        }
+        saveData(agentsFile, Object.fromEntries(agents));
+        broadcast({
+          type: 'agent_deleted',
+          agentId: message.agentId
+        });
+      }
+      break;
+    
+    case 'task_update':
+    case 'task_completed':
+    case 'task_failed':
+      // 转发Butler的任务更新
       broadcast(message);
       break;
-    case 'task_log':
-    case 'agent_update':
-      broadcast(message);
-      break;
+    
     default:
-      console.log('Unknown butler message type:', message.type);
+      // 转发其他Butler消息
+      broadcast(message);
   }
 }
 
-// 新增: REST API - 创建智能体
-app.post('/api/agents', (req, res) => {
-  const { id = uuidv4(), name, role, capabilities = [], model = 'doubao-pro-4k' } = req.body;
-
-  if (!name || !role) {
-    return res.status(400).json({ error: 'name 和 role 为必填字段' });
-  }
-  if (agents.has(id)) {
-    return res.status(400).json({ error: '智能体 ID 已存在' });
-  }
-
-  const newAgent = {
-    id,
-    name,
-    role,
-    status: 'idle',
-    capabilities,
-    model,
-    totalTasks: 0,
-    successRate: 100,
-    avgResponseTime: 0,
-    lastActivity: new Date().toISOString()
-  };
-  agents.set(id, newAgent);
-  systemStats.activeAgents++;
-
-  broadcast({ type: 'agent_created', agent: newAgent });
-  return res.json({ success: true, agent: newAgent });
-});
-
-// 新增: REST API - 更新智能体
-app.put('/api/agents/:id', (req, res) => {
-  const { id } = req.params;
-  if (!agents.has(id)) {
-    return res.status(404).json({ error: '智能体不存在' });
-  }
-  const agent = agents.get(id);
-  const allowedFields = ['name', 'role', 'capabilities', 'model', 'status'];
-  allowedFields.forEach((field) => {
-    if (req.body[field] !== undefined) {
-      agent[field] = req.body[field];
-    }
-  });
-  agent.lastActivity = new Date().toISOString();
-
-  broadcast({ type: 'agent_updated', agentId: id, update: agent });
-  return res.json({ success: true, agent });
-});
-
-// 新增: REST API - 删除智能体
-app.delete('/api/agents/:id', (req, res) => {
-  const { id } = req.params;
-  if (!agents.has(id)) {
-    return res.status(404).json({ error: '智能体不存在' });
-  }
-  agents.delete(id);
-  systemStats.activeAgents = Math.max(0, systemStats.activeAgents - 1);
-
-  broadcast({ type: 'agent_deleted', agentId: id });
-  return res.json({ success: true });
-});
-
-// 静态文件托管 (生产构建后的 dist)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const staticDir = path.resolve(__dirname, '../dist');
-app.use(express.static(staticDir));
-// 前端路由回退
-app.get('*', (req, res) => {
-  res.sendFile('index.html', { root: staticDir });
-});
+// 初始化服务器
+initializeData();
 
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-  console.log(`🚀 Enhanced AI Task Manager Server running on port ${PORT}`);
-  console.log(`📡 WebSocket server ready for connections`);
-  console.log(`🤖 ${agents.size} AI agents initialized`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 服务器运行在端口 ${PORT}`);
+  console.log(`🤖 当前智能体数量: ${agents.size}`);
+  console.log(`📋 历史任务数量: ${tasks.size}`);
 });
