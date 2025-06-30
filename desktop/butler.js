@@ -1129,7 +1129,12 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
       task.qualityScore = (totalQuality / validOutputs).toFixed(1);
       
       if (task.qualityScore < this.config.settings.qualityThreshold * 5) {
-        this.addTaskLog(task, 'warning', `质量评分偏低: ${task.qualityScore}/5`);
+        this.addTaskLog(task, 'warning', `质量评分偏低: ${task.qualityScore}/5，准备让相关智能体重新优化`);
+        if (task.retryCount < this.config.settings.retryAttempts) {
+          task.retryCount++;
+          this.addTaskLog(task,'info',`已重新排队进行第 ${task.retryCount} 次优化`);
+          this.taskQueue.push(task);
+        }
       } else {
         this.addTaskLog(task, 'success', `质量检查通过: ${task.qualityScore}/5`);
       }
