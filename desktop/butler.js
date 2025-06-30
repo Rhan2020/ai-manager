@@ -589,6 +589,17 @@ class ButlerService {
       task.outputs.push(taskOutput);
       agent.outputs.push(taskOutput);
       
+      // 实时推送到 WebSocket Server
+      this.sendToServer({
+        type: 'task_update',
+        taskId: task.id,
+        update: {
+          outputs: task.outputs,
+          progress: task.progress,
+          summary: `智能体 ${agent.name} 已产出新内容`
+        }
+      });
+      
       console.log(`✅ ${agent.name} 完成任务 (${executionTime}ms)`);
       console.log(`   📄 输出长度: ${output.length} 字符`);
       console.log(`   ⭐ 质量评分: ${taskOutput.quality}/5`);
