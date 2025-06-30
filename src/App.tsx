@@ -12,13 +12,13 @@ export default function App() {
   const selectedTask: Task | undefined = tasks.find((t) => t.id === selectedTaskId);
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>AI 任务管家 {connected ? '🟢' : '🔴'}</h2>
+    <div className="min-h-screen p-4 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <h2 className="text-xl font-bold mb-4">AI 任务管家 {connected ? '🟢' : '🔴'}</h2>
       {wsError && <p style={{ color: 'red' }}>{wsError}</p>}
       <TaskSubmission onSubmit={sendNewTask} disabled={!connected} />
-      <hr />
-      <div style={{ display: 'flex', gap: 20 }}>
-        <div style={{ flex: 1 }}>
+      <hr className="my-4" />
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="lg:w-1/3 w-full">
           <h3>任务列表</h3>
           <TaskList
             tasks={tasks}
@@ -27,7 +27,7 @@ export default function App() {
             selectedTaskId={selectedTaskId}
           />
         </div>
-        <div style={{ flex: 2 }}>
+        <div className="lg:flex-1 w-full">
           <h3>任务详情</h3>
           <TaskDetail task={selectedTask} />
         </div>
