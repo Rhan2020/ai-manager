@@ -1,5 +1,4 @@
 import * as React from 'react';
-import type { FC, ChangeEvent } from 'react';
 import { NewTaskPayload } from '../types';
 
 interface Props {
