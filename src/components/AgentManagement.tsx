@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+/** @jsxImportSource react */
+import type React from 'react';
+import { useState } from 'react';
 import { Agent } from '../types';
+import EditAgentModal from './EditAgentModal';
 
 interface Props {
   agents: Agent[];
@@ -13,6 +16,7 @@ export default function AgentManagement({ agents, onCreated, onDeleted }: Props)
   const [role, setRole] = useState('');
   const [model, setModel] = useState('doubao-pro-4k');
   const [capabilities, setCapabilities] = useState('');
+  const [editing, setEditing] = useState<Agent|null>(null);
 
   const resetForm = () => {
     setName('');
@@ -78,9 +82,13 @@ export default function AgentManagement({ agents, onCreated, onDeleted }: Props)
               <div className="text-xs opacity-70">{agent.role}</div>
             </div>
             <button onClick={()=>handleDelete(agent.id)} className="px-2 py-1 bg-red-600 text-white rounded text-xs">删除</button>
+            <button onClick={()=>setEditing(agent)} className="px-2 py-1 bg-yellow-500 text-white rounded text-xs ml-2">编辑</button>
           </div>
         ))}
       </div>
+      {editing && (
+        <EditAgentModal agent={editing} onClose={()=>setEditing(null)} />
+      )}
     </div>
   );
 }
