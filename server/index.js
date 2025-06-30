@@ -3,6 +3,8 @@ import { WebSocketServer } from 'ws';
 import http from 'http';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
 const server = http.createServer(app);
@@ -689,6 +691,16 @@ app.delete('/api/agents/:id', (req, res) => {
 
   broadcast({ type: 'agent_deleted', agentId: id });
   return res.json({ success: true });
+});
+
+// 静态文件托管 (生产构建后的 dist)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const staticDir = path.resolve(__dirname, '../dist');
+app.use(express.static(staticDir));
+// 前端路由回退
+app.get('*', (req, res) => {
+  res.sendFile('index.html', { root: staticDir });
 });
 
 const PORT = process.env.PORT || 8080;
