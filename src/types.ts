@@ -35,10 +35,15 @@ export interface Agent {
   currentTask?: string;
   capabilities: string[];
   model: string;
+  systemPrompt?: string;
+  maxTokens?: number;
+  temperature?: number;
   totalTasks: number;
   successRate: number;
   avgResponseTime: number;
   lastActivity?: string;
+  createdAt?: string;
+  createdBy?: string;
 }
 
 export interface TaskOutput {
