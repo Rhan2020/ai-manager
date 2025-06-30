@@ -576,6 +576,26 @@ class ButlerService {
       agent.metrics.averageResponseTime = 
         (agent.metrics.averageResponseTime + executionTime) / 2;
       
+      // AI 质量二次评审（analysis-agent）
+      let quality = this.assessOutputQuality(output);
+
+      if (this.doubaoClient) {
+        try {
+          const reviewPrompt = `请对下面这段智能体输出进行 1-5 分的客观质量评分，仅返回数字：\n\n${output.substring(0,3000)}\n\n评分:`;
+          const reviewScore = await this.doubaoClient.chat({
+            model: this.agents.get('analysis-agent').model,
+            systemPrompt: '你是一个严格的AI输出质量审查员，评分标准: 1=差, 5=优秀。仅回复数字。',
+            userPrompt: reviewPrompt,
+            maxTokens: 5,
+            temperature: 0
+          });
+          const num = parseFloat(reviewScore.trim());
+          if (!isNaN(num)) quality = Math.min(5, Math.max(1, num));
+        } catch (err) {
+          // 忽略审查错误，保持本地评分
+        }
+      }
+
       const taskOutput = {
         id: uuidv4(),
         agentId: agent.id,
@@ -583,19 +603,19 @@ class ButlerService {
         content: output,
         timestamp: new Date().toISOString(),
         executionTime,
-        quality: this.assessOutputQuality(output)
+        quality
       };
       
       task.outputs.push(taskOutput);
       agent.outputs.push(taskOutput);
       
-      // 实时推送到 WebSocket Server
+      // 进度推送: 完成后 100%
       this.sendToServer({
         type: 'task_update',
         taskId: task.id,
         update: {
           outputs: task.outputs,
-          progress: task.progress,
+          progress: Math.min(100, task.progress + Math.round(90 / task.assignedAgents.size)),
           summary: `智能体 ${agent.name} 已产出新内容`
         }
       });
