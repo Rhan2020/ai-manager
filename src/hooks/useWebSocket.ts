@@ -3,6 +3,7 @@ import { Task, Agent, SystemStats, NewTaskPayload, TaskLog } from '../types';
 
 interface UseWsResult {
   connected: boolean;
+  error: string | null;
   tasks: Task[];
   agents: Agent[];
   stats: SystemStats;
@@ -22,12 +23,13 @@ const defaultStats: SystemStats = {
 export default function useWebSocket(): UseWsResult {
   const wsRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [stats, setStats] = useState<SystemStats>(defaultStats);
 
   useEffect(() => {
-    const connect = () => {
+    const connect = (retry = 0) => {
       const ws = new WebSocket(`ws://${window.location.hostname}:8080`);
       wsRef.current = ws;
 
@@ -37,10 +39,12 @@ export default function useWebSocket(): UseWsResult {
 
       ws.onclose = () => {
         setConnected(false);
-        setTimeout(connect, 3000);
+        const delay = Math.min(10000, 1000 * 2 ** retry);
+        setTimeout(() => connect(retry + 1), delay);
       };
 
-      ws.onerror = () => {
+      ws.onerror = (ev) => {
+        setError('WebSocket 连接错误');
         ws.close();
       };
 
@@ -90,7 +94,15 @@ export default function useWebSocket(): UseWsResult {
 
   const send = (msg: any) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(msg));
+      try {
+        wsRef.current.send(JSON.stringify(msg));
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('WS send error', err);
+        setError('消息发送失败');
+      }
+    } else {
+      setError('未连接到服务器');
     }
   };
 
@@ -102,5 +114,5 @@ export default function useWebSocket(): UseWsResult {
     send({ type: 'task_action', taskId, action });
   };
 
-  return { connected, tasks, agents, stats, sendNewTask, sendTaskAction };
+  return { connected, error, tasks, agents, stats, sendNewTask, sendTaskAction };
 }

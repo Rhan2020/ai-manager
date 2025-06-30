@@ -6,7 +6,7 @@ import TaskDetail from './components/TaskDetail';
 import { Task } from './types';
 
 export default function App() {
-  const { connected, tasks, sendNewTask, sendTaskAction } = useWebSocket();
+  const { connected, error: wsError, tasks, sendNewTask, sendTaskAction } = useWebSocket();
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
 
   const selectedTask: Task | undefined = tasks.find((t) => t.id === selectedTaskId);
@@ -14,6 +14,7 @@ export default function App() {
   return (
     <div style={{ padding: 20 }}>
       <h2>AI 任务管家 {connected ? '🟢' : '🔴'}</h2>
+      {wsError && <p style={{ color: 'red' }}>{wsError}</p>}
       <TaskSubmission onSubmit={sendNewTask} disabled={!connected} />
       <hr />
       <div style={{ display: 'flex', gap: 20 }}>
