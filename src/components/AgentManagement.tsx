@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import type React from 'react';
 import { useState } from 'react';
 import { Agent } from '../types';
