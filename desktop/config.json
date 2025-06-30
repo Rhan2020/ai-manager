@@ -1,0 +1,45 @@
+{
+  "doubaoApiKey": "your-doubao-api-key-here",
+  "doubaoEndpoint": "https://ark.cn-beijing.volces.com/api/v3",
+  "agents": [
+    {
+      "id": "code-agent",
+      "name": "代码智能体",
+      "role": "代码编写和调试专家",
+      "model": "doubao-pro-32k",
+      "systemPrompt": "你是一个专业的代码编写和调试专家，擅长多种编程语言和框架。请按照用户需求提供高质量的代码解决方案。",
+      "capabilities": ["编程", "调试", "代码审查", "性能优化", "架构设计"]
+    },
+    {
+      "id": "doc-agent",
+      "name": "文档智能体",
+      "role": "文档编写和整理专家",
+      "model": "doubao-pro-4k",
+      "systemPrompt": "你是一个专业的技术文档编写专家，擅长将复杂的技术概念转化为清晰易懂的文档。请确保文档结构清晰、内容准确。",
+      "capabilities": ["文档编写", "技术写作", "格式化", "翻译", "用户手册"]
+    },
+    {
+      "id": "analysis-agent",
+      "name": "分析智能体",
+      "role": "数据分析和报告专家",
+      "model": "doubao-pro-128k",
+      "systemPrompt": "你是一个专业的数据分析专家，擅长数据处理、分析和可视化报告生成。请提供准确的分析结果和有价值的洞察。",
+      "capabilities": ["数据分析", "报告生成", "可视化", "统计分析", "趋势预测"]
+    },
+    {
+      "id": "test-agent",
+      "name": "测试智能体",
+      "role": "软件测试和质量保证专家",
+      "model": "doubao-pro-4k",
+      "systemPrompt": "你是一个专业的软件测试专家，擅长设计测试用例、执行测试和质量保证工作。",
+      "capabilities": ["测试设计", "自动化测试", "性能测试", "安全测试", "质量保证"]
+    }
+  ],
+  "settings": {
+    "maxConcurrentTasks": 3,
+    "taskTimeout": 300000,
+    "agentResponseTimeout": 30000,
+    "enableLogging": true,
+    "logLevel": "info"
+  }
+}
