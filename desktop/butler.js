@@ -30,6 +30,12 @@ class ButlerService {
     this.doubaoClient = this.config.doubaoApiKey !== 'your-doubao-api-key-here'
       ? new DoubaoClient(this.config.doubaoApiKey, this.config.doubaoEndpoint)
       : null;
+
+    // 服务器 REST 基础地址
+    this.serverBaseUrl = `http://${this.serverHost}:8080`;
+
+    // 保存配置文件路径，供后续写入
+    this.configPath = path.join(process.cwd(), 'desktop', 'config.json');
   }
 
   loadConfig() {
@@ -148,6 +154,10 @@ class ButlerService {
     // 建立与服务端的 WebSocket 连接（若存在）
     this.connectToServer();
     
+    // 同步本地智能体到服务器
+    await this.delay(1000);
+    await this.syncAgentsWithServer();
+    
     // Start services
     this.startInputListener();
     this.startTaskProcessor();
@@ -237,6 +247,36 @@ class ButlerService {
 
       case 'config':
         this.showConfig();
+        break;
+
+      case 'apikey':
+        if (args[0]) {
+          this.config.doubaoApiKey = args[0];
+          this.saveConfig();
+          console.log('✅ 已更新豆包 API Key');
+        } else {
+          console.log(`当前 API Key: ${this.config.doubaoApiKey.substring(0,10)}...`);
+        }
+        break;
+
+      case 'agent':
+        switch (args[0]) {
+          case 'sync':
+            await this.syncAgentsWithServer();
+            break;
+          case 'list':
+            await this.listRemoteAgents();
+            break;
+          case 'delete':
+            if (args[1]) {
+              await this.deleteRemoteAgent(args[1]);
+            } else {
+              console.log('用法: agent delete <agent-id>');
+            }
+            break;
+          default:
+            console.log('可用子命令: sync | list | delete <id>');
+        }
         break;
 
       case 'clear':
@@ -1316,6 +1356,10 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
     console.log('   tasks    - 查看任务列表');
     console.log('   metrics  - 查看性能指标');
     console.log('   config   - 查看配置信息');
+    console.log('   agent list     - 查看服务器智能体');
+    console.log('   agent sync     - 同步本地智能体到服务器');
+    console.log('   agent delete <id> - 删除服务器智能体');
+    console.log('   apikey <key>   - 设置豆包API密钥');
     console.log('');
     console.log('🛠️  系统控制:');
     console.log('   clear    - 清屏');
@@ -1585,6 +1629,83 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
     this.taskQueue.push(task);
 
     console.log(`📥 收到远程任务 ${task.id}: ${task.instruction}`);
+  }
+
+  /**
+   * 将当前 this.config 写入 config.json
+   */
+  saveConfig() {
+    try {
+      fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2), 'utf8');
+      console.log('✅ 配置文件已保存');
+    } catch (err) {
+      console.error('❌ 保存配置文件失败', err.message);
+    }
+  }
+
+  /* --------------------------------------------------
+   * 智能体同步 / 远程管理
+   * -------------------------------------------------- */
+
+  async getServerAgents() {
+    const res = await axios.get(`${this.serverBaseUrl}/api/agents`).catch((err)=>{
+      throw new Error(err.response?.data?.error || err.message);
+    });
+    return res.data;
+  }
+
+  async syncAgentsWithServer() {
+    console.log('🔄 正在同步本地智能体配置到服务器...');
+    try {
+      const remoteAgents = await this.getServerAgents();
+      const localAgents = this.config.agents || [];
+
+      for (const local of localAgents) {
+        const remote = remoteAgents.find((a)=>a.id === local.id);
+        if (!remote) {
+          await axios.post(`${this.serverBaseUrl}/api/agents`, local).catch(()=>{});
+          console.log(`➕ 已创建智能体: ${local.name}`);
+        } else {
+          const fields = ['name','role','model','capabilities'];
+          const update = {};
+          let needUpdate = false;
+          fields.forEach((f)=>{
+            if (JSON.stringify(remote[f]) !== JSON.stringify(local[f])) {
+              update[f] = local[f];
+              needUpdate = true;
+            }
+          });
+          if (needUpdate) {
+            await axios.put(`${this.serverBaseUrl}/api/agents/${local.id}`, update).catch(()=>{});
+            console.log(`🔄 已更新智能体: ${local.name}`);
+          }
+        }
+      }
+      console.log('✅ 智能体同步完成');
+    } catch(err) {
+      console.error('❌ 智能体同步失败', err.message);
+    }
+  }
+
+  async listRemoteAgents() {
+    try {
+      const agents = await this.getServerAgents();
+      console.log('\n🌐 服务器智能体列表:');
+      agents.forEach((a)=>{
+        console.log(`  • ${a.id} - ${a.name} (${a.role})`);
+      });
+    } catch(err){
+      console.error('❌ 获取服务器智能体失败', err.message);
+    }
+  }
+
+  async deleteRemoteAgent(agentId){
+    try {
+      await axios.delete(`${this.serverBaseUrl}/api/agents/${agentId}`);
+      console.log(`🗑️ 已删除服务器智能体 ${agentId}`);
+    } catch(err){
+      console.error('❌ 删除失败', err.response?.data?.error || err.message);
+    }
   }
 }
 

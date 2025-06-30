@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import * as React from 'react';
 import useWebSocket from './hooks/useWebSocket';
 import TaskSubmission from './components/TaskSubmission';
 import TaskList from './components/TaskList';
 import TaskDetail from './components/TaskDetail';
+import AgentManagement from './components/AgentManagement';
 import { Task } from './types';
 
 export default function App() {
-  const { connected, error: wsError, tasks, sendNewTask, sendTaskAction } = useWebSocket();
-  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
+  const { connected, error: wsError, tasks, agents, sendNewTask, sendTaskAction } = useWebSocket();
+  const [selectedTaskId, setSelectedTaskId] = React.useState<string | undefined>();
 
   const selectedTask: Task | undefined = tasks.find((t) => t.id === selectedTaskId);
 
@@ -31,6 +32,10 @@ export default function App() {
           <h3>任务详情</h3>
           <TaskDetail task={selectedTask} />
         </div>
+      </div>
+      {/* 智能体管理 */}
+      <div className="mt-8">
+        <AgentManagement agents={agents} onCreated={()=>{}} onDeleted={()=>{}} />
       </div>
     </div>
   );

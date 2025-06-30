@@ -66,7 +66,18 @@ export default function useWebSocket(): UseWsResult {
     };
   }, []);
 
-  const handleMessage = (data: any) => {
+  type WsMessage =
+    | { type: 'task_update'; taskId: string; update: Partial<Task> }
+    | { type: 'task_created'; task: Task }
+    | { type: 'task_log'; taskId: string; log: TaskLog }
+    | { type: 'agents_status'; agents: Agent[] }
+    | { type: 'agent_update'; agentId: string; update: Partial<Agent> }
+    | { type: 'agent_created'; agent: Agent }
+    | { type: 'agent_updated'; agentId: string; update: Partial<Agent> }
+    | { type: 'agent_deleted'; agentId: string }
+    | { type: 'system_stats'; stats: SystemStats };
+
+  const handleMessage = (data: WsMessage) => {
     switch (data.type) {
       case 'task_update':
         setTasks((prev: Task[]) => prev.map((t: Task) => t.id === data.taskId ? { ...t, ...data.update } : t));
@@ -88,7 +99,17 @@ export default function useWebSocket(): UseWsResult {
       case 'system_stats':
         setStats(data.stats);
         break;
+      case 'agent_created':
+        setAgents((prev: Agent[]) => [...prev, data.agent]);
+        break;
+      case 'agent_updated':
+        setAgents((prev: Agent[]) => prev.map((a: Agent) => a.id === data.agentId ? { ...a, ...data.update } : a));
+        break;
+      case 'agent_deleted':
+        setAgents((prev: Agent[]) => prev.filter((a: Agent) => a.id !== data.agentId));
+        break;
       default:
+        // noop
     }
   };
 
