@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { Task } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';
 

@@ -1,5 +1,4 @@
-import type React from 'react';
-import { useState } from 'react';
+import * as React from 'react';
 import { NewTaskPayload } from '../types';
 
 interface Props {
@@ -8,9 +7,9 @@ interface Props {
 }
 
 export default function TaskSubmission({ onSubmit, disabled }: Props) {
-  const [instruction, setInstruction] = useState('');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [category, setCategory] = useState('');
+  const [instruction, setInstruction] = React.useState('');
+  const [priority, setPriority] = React.useState<'low' | 'medium' | 'high'>('medium');
+  const [category, setCategory] = React.useState('');
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

@@ -1,5 +1,4 @@
-import type React from 'react';
-import { useState } from 'react';
+import * as React from 'react';
 import { Agent } from '../types';
 import EditAgentModal from './EditAgentModal';
 
@@ -10,12 +9,12 @@ interface Props {
 }
 
 export default function AgentManagement({ agents, onCreated, onDeleted }: Props) {
-  const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [role, setRole] = useState('');
-  const [model, setModel] = useState('doubao-pro-4k');
-  const [capabilities, setCapabilities] = useState('');
-  const [editing, setEditing] = useState<Agent|null>(null);
+  const [showForm, setShowForm] = React.useState(false);
+  const [name, setName] = React.useState('');
+  const [role, setRole] = React.useState('');
+  const [model, setModel] = React.useState('doubao-pro-4k');
+  const [capabilities, setCapabilities] = React.useState('');
+  const [editing, setEditing] = React.useState<Agent|null>(null);
 
   const resetForm = () => {
     setName('');

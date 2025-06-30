@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import * as React from 'react';
 import useWebSocket from './hooks/useWebSocket';
 import TaskSubmission from './components/TaskSubmission';
 import TaskList from './components/TaskList';
@@ -8,7 +8,7 @@ import { Task } from './types';
 
 export default function App() {
   const { connected, error: wsError, tasks, agents, sendNewTask, sendTaskAction } = useWebSocket();
-  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
+  const [selectedTaskId, setSelectedTaskId] = React.useState<string | undefined>();
 
   const selectedTask: Task | undefined = tasks.find((t) => t.id === selectedTaskId);
 

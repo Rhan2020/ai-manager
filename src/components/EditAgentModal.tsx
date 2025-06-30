@@ -1,5 +1,4 @@
-import type React from 'react';
-import { useState } from 'react';
+import * as React from 'react';
 import type { Agent } from '../types';
 
 interface Props {
@@ -9,11 +8,11 @@ interface Props {
 }
 
 export default function EditAgentModal({ agent, onClose, onSaved }: Props) {
-  const [name, setName] = useState(agent.name);
-  const [role, setRole] = useState(agent.role);
-  const [model, setModel] = useState(agent.model);
-  const [capabilities, setCapabilities] = useState(agent.capabilities.join(', '));
-  const [saving, setSaving] = useState(false);
+  const [name, setName] = React.useState(agent.name);
+  const [role, setRole] = React.useState(agent.role);
+  const [model, setModel] = React.useState(agent.model);
+  const [capabilities, setCapabilities] = React.useState(agent.capabilities.join(', '));
+  const [saving, setSaving] = React.useState(false);
   const canSave = name.trim() && role.trim();
 
   const handleSave = async () => {
