@@ -1205,6 +1205,18 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
     
     console.log(`${levelEmoji[level]} ${message}`);
 
+    // Markdown 日志写入
+    try {
+      const logDir = path.join(process.cwd(), 'desktop', 'logs');
+      if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+
+      const mdPath = path.join(logDir, `${task.id}.md`);
+      const mdLine = `- ${new Date(log.timestamp).toLocaleTimeString()} **${level.toUpperCase()}** ${message}\n`;
+      fs.appendFileSync(mdPath, mdLine, 'utf8');
+    } catch (err) {
+      console.error('❌ 写入Markdown日志失败', err.message);
+    }
+
     // 将日志同步到服务端
     this.sendToServer({ type: 'task_log', taskId: task.id, log });
   }
