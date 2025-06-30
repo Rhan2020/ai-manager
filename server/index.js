@@ -629,6 +629,68 @@ function handleButlerMessage(message) {
   }
 }
 
+// 新增: REST API - 创建智能体
+app.post('/api/agents', (req, res) => {
+  const { id = uuidv4(), name, role, capabilities = [], model = 'doubao-pro-4k' } = req.body;
+
+  if (!name || !role) {
+    return res.status(400).json({ error: 'name 和 role 为必填字段' });
+  }
+  if (agents.has(id)) {
+    return res.status(400).json({ error: '智能体 ID 已存在' });
+  }
+
+  const newAgent = {
+    id,
+    name,
+    role,
+    status: 'idle',
+    capabilities,
+    model,
+    totalTasks: 0,
+    successRate: 100,
+    avgResponseTime: 0,
+    lastActivity: new Date().toISOString()
+  };
+  agents.set(id, newAgent);
+  systemStats.activeAgents++;
+
+  broadcast({ type: 'agent_created', agent: newAgent });
+  return res.json({ success: true, agent: newAgent });
+});
+
+// 新增: REST API - 更新智能体
+app.put('/api/agents/:id', (req, res) => {
+  const { id } = req.params;
+  if (!agents.has(id)) {
+    return res.status(404).json({ error: '智能体不存在' });
+  }
+  const agent = agents.get(id);
+  const allowedFields = ['name', 'role', 'capabilities', 'model', 'status'];
+  allowedFields.forEach((field) => {
+    if (req.body[field] !== undefined) {
+      agent[field] = req.body[field];
+    }
+  });
+  agent.lastActivity = new Date().toISOString();
+
+  broadcast({ type: 'agent_updated', agentId: id, update: agent });
+  return res.json({ success: true, agent });
+});
+
+// 新增: REST API - 删除智能体
+app.delete('/api/agents/:id', (req, res) => {
+  const { id } = req.params;
+  if (!agents.has(id)) {
+    return res.status(404).json({ error: '智能体不存在' });
+  }
+  agents.delete(id);
+  systemStats.activeAgents = Math.max(0, systemStats.activeAgents - 1);
+
+  broadcast({ type: 'agent_deleted', agentId: id });
+  return res.json({ success: true });
+});
+
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`🚀 Enhanced AI Task Manager Server running on port ${PORT}`);

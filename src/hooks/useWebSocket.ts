@@ -88,6 +88,15 @@ export default function useWebSocket(): UseWsResult {
       case 'system_stats':
         setStats(data.stats);
         break;
+      case 'agent_created':
+        setAgents((prev: Agent[]) => [...prev, data.agent]);
+        break;
+      case 'agent_updated':
+        setAgents((prev: Agent[]) => prev.map((a: Agent) => a.id === data.agentId ? { ...a, ...data.update } : a));
+        break;
+      case 'agent_deleted':
+        setAgents((prev: Agent[]) => prev.filter((a: Agent) => a.id !== data.agentId));
+        break;
       default:
     }
   };
