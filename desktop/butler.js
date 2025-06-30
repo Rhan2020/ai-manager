@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
+import WebSocket from 'ws';
 
 // Enhanced Butler service with real Doubao API integration
 class ButlerService {
@@ -22,6 +23,9 @@ class ButlerService {
       successRate: 0,
       agentUtilization: new Map()
     };
+    // WebSocket 客户端及服务端主机
+    this.ws = null;
+    this.serverHost = this.config.serverHost || 'localhost';
   }
 
   loadConfig() {
@@ -136,6 +140,9 @@ class ButlerService {
       console.log('✅ 豆包API配置已加载');
       await this.testApiConnection();
     }
+    
+    // 建立与服务端的 WebSocket 连接（若存在）
+    this.connectToServer();
     
     // Start services
     this.startInputListener();
@@ -1197,6 +1204,9 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
     };
     
     console.log(`${levelEmoji[level]} ${message}`);
+
+    // 将日志同步到服务端
+    this.sendToServer({ type: 'task_log', taskId: task.id, log });
   }
 
   pauseTask(taskId) {
@@ -1463,6 +1473,83 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
 
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /* --------------------------------------------------
+   * 与中央 Server 的通信
+   * -------------------------------------------------- */
+
+  connectToServer() {
+    try {
+      const url = `ws://${this.serverHost}:8080`;
+      this.ws = new WebSocket(url);
+
+      this.ws.on('open', () => {
+        console.log(`🔌 已连接到服务器 ${url}`);
+        // 注册身份
+        this.ws.send(JSON.stringify({ type: 'register', role: 'butler' }));
+      });
+
+      this.ws.on('message', (data) => {
+        let msg;
+        try {
+          msg = JSON.parse(data.toString());
+        } catch (err) {
+          console.error('❌ 解析服务器消息失败', err);
+          return;
+        }
+
+        if (msg.type === 'task') {
+          this.addTaskFromServer(msg.task);
+        }
+      });
+
+      this.ws.on('close', () => {
+        console.log('⚠️ 与服务器连接断开，3 秒后重连...');
+        setTimeout(() => this.connectToServer(), 3000);
+      });
+
+      this.ws.on('error', (err) => {
+        console.error('❌ WebSocket 错误', err);
+      });
+    } catch (err) {
+      console.error('❌ 无法连接服务器', err);
+    }
+  }
+
+  sendToServer(message) {
+    if (this.ws && this.ws.readyState === 1) { // OPEN
+      this.ws.send(JSON.stringify(message));
+    }
+  }
+
+  /**
+   * 服务端推送的新任务
+   */
+  addTaskFromServer(taskData) {
+    if (!taskData || !taskData.id) return;
+
+    // 若任务已存在则忽略
+    if (this.tasks.has(taskData.id)) return;
+
+    const task = {
+      id: taskData.id,
+      instruction: taskData.instruction,
+      status: 'queued',
+      priority: taskData.priority || 'medium',
+      createdAt: new Date(taskData.createdAt || Date.now()),
+      assignedAgents: new Set(),
+      progress: 0,
+      outputs: [],
+      logs: [],
+      summary: '',
+      retryCount: 0
+    };
+
+    this.tasks.set(task.id, task);
+    this.taskQueue.push(task);
+
+    console.log(`📥 收到远程任务 ${task.id}: ${task.instruction}`);
   }
 }
 
