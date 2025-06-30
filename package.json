@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "npm run server & npm run desktop & vite",
-    "build": "vite build",
+    "build:web": "vite build",
+    "build:server": "tsc --noEmit",
+    "build": "npm run build:server && npm run build:web",
+    "start": "node server/index.js",
+    "deploy": "bash deploy/deploy.sh",
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "node server/index.js",
