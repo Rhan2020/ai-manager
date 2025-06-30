@@ -43,7 +43,7 @@ export default function useWebSocket(): UseWsResult {
         setTimeout(() => connect(retry + 1), delay);
       };
 
-      ws.onerror = (ev) => {
+      ws.onerror = () => {
         setError('WebSocket 连接错误');
         ws.close();
       };

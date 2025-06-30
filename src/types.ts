@@ -1,7 +1,7 @@
 export interface Task {
   id: string;
   instruction: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'paused';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'paused' | 'queued';
   createdAt: string;
   completedAt?: string;
   agents: TaskAgent[];
