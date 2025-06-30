@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { FC, ChangeEvent } from 'react';
 import useWebSocket from './hooks/useWebSocket';
 import TaskSubmission from './components/TaskSubmission';
 import TaskList from './components/TaskList';

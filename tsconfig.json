@@ -1,8 +1,11 @@
 {
   "compilerOptions": {
     "jsx": "react-jsx",
+    "jsxImportSource": "react",
     "types": ["react", "react-dom"],
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "allowJs": true,
+    "esModuleInterop": true
   },
   "files": [],
   "references": [

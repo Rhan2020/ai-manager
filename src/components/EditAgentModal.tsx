@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { FC, ChangeEvent } from 'react';
 import type { Agent } from '../types';
 
 interface Props {

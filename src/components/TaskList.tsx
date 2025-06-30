@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Task } from '../types';
+import type { FC, ChangeEvent } from 'react';
 
 interface Props {
   tasks: Task[];

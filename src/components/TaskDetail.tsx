@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Task } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';
+import type { FC, ChangeEvent } from 'react';
 
 interface Props {
   task?: Task;
