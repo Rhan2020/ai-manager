@@ -65,10 +65,10 @@ export default function AgentManagement({ agents, onCreated, onDeleted }: Props)
       </div>
       {showForm && (
         <div className="border p-3 rounded mb-4 space-y-2 bg-white dark:bg-gray-800">
-          <input value={name} onChange={(e)=>setName(e.target.value)} placeholder="名称" className="border p-2 w-full rounded" />
-          <input value={role} onChange={(e)=>setRole(e.target.value)} placeholder="角色" className="border p-2 w-full rounded" />
-          <input value={model} onChange={(e)=>setModel(e.target.value)} placeholder="模型" className="border p-2 w-full rounded" />
-          <input value={capabilities} onChange={(e)=>setCapabilities(e.target.value)} placeholder="能力 (逗号分隔)" className="border p-2 w-full rounded" />
+          <input value={name} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setName(e.target.value)} placeholder="名称" className="border p-2 w-full rounded" />
+          <input value={role} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setRole(e.target.value)} placeholder="角色" className="border p-2 w-full rounded" />
+          <input value={model} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setModel(e.target.value)} placeholder="模型" className="border p-2 w-full rounded" />
+          <input value={capabilities} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setCapabilities(e.target.value)} placeholder="能力 (逗号分隔)" className="border p-2 w-full rounded" />
           <button onClick={handleCreate} className="px-3 py-1 bg-green-600 text-white rounded">创建</button>
         </div>
       )}

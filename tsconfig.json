@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "types": ["react","react-dom"]
+    "types": ["react","react-dom"],
+    "jsx": "react-jsx"
   },
   "files": [],
   "references": [
