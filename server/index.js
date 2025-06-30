@@ -24,6 +24,9 @@ const systemStats = {
   systemUptime: Date.now()
 };
 
+// Butler WebSocket 连接（仅支持单实例）
+let butlerSocket = null;
+
 // Initialize enhanced demo agents
 const demoAgents = [
   {
@@ -107,6 +110,21 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (data) => {
     try {
       const message = JSON.parse(data.toString());
+
+      /* Butler 注册与消息处理 */
+      if (message.type === 'register' && message.role === 'butler') {
+        ws.isButler = true;
+        butlerSocket = ws;
+        console.log('🤖 Butler 已注册连接');
+        return; // 不继续向下分发
+      }
+
+      // 来自 Butler 的消息直接广播给客户端
+      if (ws.isButler) {
+        handleButlerMessage(message);
+        return;
+      }
+
       handleMessage(clientId, message);
     } catch (error) {
       console.error('Error parsing message:', error);
@@ -164,8 +182,13 @@ function handleNewTask(taskData) {
     task
   });
 
-  // Start processing the task
-  processTask(task.id);
+  // 若 Butler 在线，则交由 Butler 处理；否则服务器本地模拟处理
+  if (butlerSocket && butlerSocket.readyState === 1) {
+    butlerSocket.send(JSON.stringify({ type: 'task', task }));
+  } else {
+    // Start processing the task locally
+    processTask(task.id);
+  }
 }
 
 function handleTaskAction(taskId, action) {
@@ -586,6 +609,25 @@ app.post('/api/tasks', (req, res) => {
   handleNewTask(task);
   res.json({ success: true, taskId: task.id });
 });
+
+function handleButlerMessage(message) {
+  switch (message.type) {
+    case 'task_update':
+      // 更新缓存的任务信息
+      if (tasks.has(message.taskId)) {
+        const task = tasks.get(message.taskId);
+        Object.assign(task, message.update);
+      }
+      broadcast(message);
+      break;
+    case 'task_log':
+    case 'agent_update':
+      broadcast(message);
+      break;
+    default:
+      console.log('Unknown butler message type:', message.type);
+  }
+}
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {

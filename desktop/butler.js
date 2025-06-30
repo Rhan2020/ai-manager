@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
+import WebSocket from 'ws';
+import DoubaoClient from './doubaoClient.js';
 
 // Enhanced Butler service with real Doubao API integration
 class ButlerService {
@@ -22,6 +24,12 @@ class ButlerService {
       successRate: 0,
       agentUtilization: new Map()
     };
+    // WebSocket 客户端及服务端主机
+    this.ws = null;
+    this.serverHost = this.config.serverHost || 'localhost';
+    this.doubaoClient = this.config.doubaoApiKey !== 'your-doubao-api-key-here'
+      ? new DoubaoClient(this.config.doubaoApiKey, this.config.doubaoEndpoint)
+      : null;
   }
 
   loadConfig() {
@@ -136,6 +144,9 @@ class ButlerService {
       console.log('✅ 豆包API配置已加载');
       await this.testApiConnection();
     }
+    
+    // 建立与服务端的 WebSocket 连接（若存在）
+    this.connectToServer();
     
     // Start services
     this.startInputListener();
@@ -565,6 +576,26 @@ class ButlerService {
       agent.metrics.averageResponseTime = 
         (agent.metrics.averageResponseTime + executionTime) / 2;
       
+      // AI 质量二次评审（analysis-agent）
+      let quality = this.assessOutputQuality(output);
+
+      if (this.doubaoClient) {
+        try {
+          const reviewPrompt = `请对下面这段智能体输出进行 1-5 分的客观质量评分，仅返回数字：\n\n${output.substring(0,3000)}\n\n评分:`;
+          const reviewScore = await this.doubaoClient.chat({
+            model: this.agents.get('analysis-agent').model,
+            systemPrompt: '你是一个严格的AI输出质量审查员，评分标准: 1=差, 5=优秀。仅回复数字。',
+            userPrompt: reviewPrompt,
+            maxTokens: 5,
+            temperature: 0
+          });
+          const num = parseFloat(reviewScore.trim());
+          if (!isNaN(num)) quality = Math.min(5, Math.max(1, num));
+        } catch (err) {
+          // 忽略审查错误，保持本地评分
+        }
+      }
+
       const taskOutput = {
         id: uuidv4(),
         agentId: agent.id,
@@ -572,11 +603,22 @@ class ButlerService {
         content: output,
         timestamp: new Date().toISOString(),
         executionTime,
-        quality: this.assessOutputQuality(output)
+        quality
       };
       
       task.outputs.push(taskOutput);
       agent.outputs.push(taskOutput);
+      
+      // 进度推送: 完成后 100%
+      this.sendToServer({
+        type: 'task_update',
+        taskId: task.id,
+        update: {
+          outputs: task.outputs,
+          progress: Math.min(100, task.progress + Math.round(90 / task.assignedAgents.size)),
+          summary: `智能体 ${agent.name} 已产出新内容`
+        }
+      });
       
       console.log(`✅ ${agent.name} 完成任务 (${executionTime}ms)`);
       console.log(`   📄 输出长度: ${output.length} 字符`);
@@ -624,41 +666,20 @@ class ButlerService {
   }
 
   async callDoubaoAPI(agent, prompt, isTest = false) {
-    if (this.config.doubaoApiKey === 'your-doubao-api-key-here') {
+    if (!this.doubaoClient) {
       // Mock response for demo
       await this.delay(1000 + Math.random() * 2000);
       return this.generateMockResponse(agent, prompt);
     }
 
     try {
-      const response = await axios.post(
-        `${this.config.doubaoEndpoint}/chat/completions`,
-        {
-          model: agent.model,
-          messages: [
-            {
-              role: 'system',
-              content: agent.systemPrompt
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: agent.maxTokens || 2000,
-          temperature: agent.temperature || 0.3,
-          stream: false
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.config.doubaoApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: this.config.settings.agentResponseTimeout
-        }
-      );
-
-      return response.data.choices[0].message.content;
+      return await this.doubaoClient.chat({
+        model: agent.model,
+        systemPrompt: agent.systemPrompt,
+        userPrompt: prompt,
+        maxTokens: agent.maxTokens || 2000,
+        temperature: agent.temperature || 0.3
+      });
     } catch (error) {
       if (isTest) {
         throw error;
@@ -1099,6 +1120,10 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
 
   assessOutputQuality(output) {
     // Simple quality assessment based on content characteristics
+    if (!output || output.trim().length < 30) return 1;
+    const sensitive = ['违法', '违规', '敏感'];
+    if (sensitive.some(w => output.includes(w))) return 1;
+
     let score = 3; // Base score
     
     // Length check
@@ -1135,7 +1160,12 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
       task.qualityScore = (totalQuality / validOutputs).toFixed(1);
       
       if (task.qualityScore < this.config.settings.qualityThreshold * 5) {
-        this.addTaskLog(task, 'warning', `质量评分偏低: ${task.qualityScore}/5`);
+        this.addTaskLog(task, 'warning', `质量评分偏低: ${task.qualityScore}/5，准备让相关智能体重新优化`);
+        if (task.retryCount < this.config.settings.retryAttempts) {
+          task.retryCount++;
+          this.addTaskLog(task,'info',`已重新排队进行第 ${task.retryCount} 次优化`);
+          this.taskQueue.push(task);
+        }
       } else {
         this.addTaskLog(task, 'success', `质量检查通过: ${task.qualityScore}/5`);
       }
@@ -1197,6 +1227,21 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
     };
     
     console.log(`${levelEmoji[level]} ${message}`);
+
+    // Markdown 日志写入
+    try {
+      const logDir = path.join(process.cwd(), 'desktop', 'logs');
+      if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+
+      const mdPath = path.join(logDir, `${task.id}.md`);
+      const mdLine = `- ${new Date(log.timestamp).toLocaleTimeString()} **${level.toUpperCase()}** ${message}\n`;
+      fs.appendFileSync(mdPath, mdLine, 'utf8');
+    } catch (err) {
+      console.error('❌ 写入Markdown日志失败', err.message);
+    }
+
+    // 将日志同步到服务端
+    this.sendToServer({ type: 'task_log', taskId: task.id, log });
   }
 
   pauseTask(taskId) {
@@ -1463,6 +1508,83 @@ A: 可通过系统内的"帮助"菜单联系我们的技术支持团队。`
 
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /* --------------------------------------------------
+   * 与中央 Server 的通信
+   * -------------------------------------------------- */
+
+  connectToServer() {
+    try {
+      const url = `ws://${this.serverHost}:8080`;
+      this.ws = new WebSocket(url);
+
+      this.ws.on('open', () => {
+        console.log(`🔌 已连接到服务器 ${url}`);
+        // 注册身份
+        this.ws.send(JSON.stringify({ type: 'register', role: 'butler' }));
+      });
+
+      this.ws.on('message', (data) => {
+        let msg;
+        try {
+          msg = JSON.parse(data.toString());
+        } catch (err) {
+          console.error('❌ 解析服务器消息失败', err);
+          return;
+        }
+
+        if (msg.type === 'task') {
+          this.addTaskFromServer(msg.task);
+        }
+      });
+
+      this.ws.on('close', () => {
+        console.log('⚠️ 与服务器连接断开，3 秒后重连...');
+        setTimeout(() => this.connectToServer(), 3000);
+      });
+
+      this.ws.on('error', (err) => {
+        console.error('❌ WebSocket 错误', err);
+      });
+    } catch (err) {
+      console.error('❌ 无法连接服务器', err);
+    }
+  }
+
+  sendToServer(message) {
+    if (this.ws && this.ws.readyState === 1) { // OPEN
+      this.ws.send(JSON.stringify(message));
+    }
+  }
+
+  /**
+   * 服务端推送的新任务
+   */
+  addTaskFromServer(taskData) {
+    if (!taskData || !taskData.id) return;
+
+    // 若任务已存在则忽略
+    if (this.tasks.has(taskData.id)) return;
+
+    const task = {
+      id: taskData.id,
+      instruction: taskData.instruction,
+      status: 'queued',
+      priority: taskData.priority || 'medium',
+      createdAt: new Date(taskData.createdAt || Date.now()),
+      assignedAgents: new Set(),
+      progress: 0,
+      outputs: [],
+      logs: [],
+      summary: '',
+      retryCount: 0
+    };
+
+    this.tasks.set(task.id, task);
+    this.taskQueue.push(task);
+
+    console.log(`📥 收到远程任务 ${task.id}: ${task.instruction}`);
   }
 }
 
