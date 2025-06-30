@@ -1,0 +1,46 @@
+# SSH配置示例文件
+# 将此文件复制到 ~/.ssh/config 并修改相应的值
+
+# 腾讯云服务器配置示例
+Host my-tencent
+    HostName your-server-ip-address
+    User ubuntu
+    Port 22
+    IdentityFile ~/.ssh/id_rsa
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    LogLevel ERROR
+
+# 生产服务器配置示例
+Host production
+    HostName your-production-server.com
+    User deploy
+    Port 22
+    IdentityFile ~/.ssh/production_key
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+# 开发服务器配置示例
+Host dev
+    HostName dev.yourdomain.com
+    User developer
+    Port 2222
+    IdentityFile ~/.ssh/dev_key
+    ForwardAgent yes
+
+# 跳板机配置示例
+Host jumpserver
+    HostName jumpserver.company.com
+    User your-username
+    Port 22
+    IdentityFile ~/.ssh/jump_key
+
+# 通过跳板机连接内网服务器
+Host internal-server
+    HostName 192.168.1.100
+    User appuser
+    Port 22
+    IdentityFile ~/.ssh/internal_key
+    ProxyJump jumpserver
