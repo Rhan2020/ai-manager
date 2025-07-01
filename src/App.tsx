@@ -1,5 +1,5 @@
 import * as React from 'react';
-import useWebSocket from './hooks/useWebSocket';
+import usePolling from './hooks/usePolling';
 import TaskSubmission from './components/TaskSubmission';
 import TaskList from './components/TaskList';
 import TaskDetail from './components/TaskDetail';
@@ -7,7 +7,7 @@ import AgentManagement from './components/AgentManagement';
 import { Task, Agent } from './types';
 
 export default function App() {
-  const { connected, error: wsError, tasks, agents, sendNewTask, sendTaskAction } = useWebSocket();
+  const { connected, error: wsError, tasks, agents, sendNewTask, sendTaskAction } = usePolling();
   const [selectedTaskId, setSelectedTaskId] = React.useState<string | undefined>();
   const [agentList, setAgentList] = React.useState<Agent[]>(agents);
 

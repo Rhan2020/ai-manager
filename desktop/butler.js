@@ -13,17 +13,22 @@ class ButlerService {
     this.agents = new Map();
     this.tasks = new Map();
     this.config = this.loadConfig();
-    this.setupAgents();
-    this.isRunning = false;
-    this.taskQueue = [];
-    this.maxConcurrentTasks = this.config.settings?.maxConcurrentTasks || 3;
-    this.activeTasks = new Set();
+    // 必须在 setupAgents 之前初始化 performanceMetrics
     this.performanceMetrics = {
       totalTasksProcessed: 0,
       averageCompletionTime: 0,
       successRate: 0,
       agentUtilization: new Map()
     };
+    
+    // 现在可以安全地设置智能体
+    this.setupAgents();
+    
+    this.isRunning = false;
+    this.taskQueue = [];
+    this.maxConcurrentTasks = this.config.settings?.maxConcurrentTasks || 3;
+    this.activeTasks = new Set();
+    
     // WebSocket 客户端及服务端主机
     this.ws = null;
     this.serverHost = this.config.serverHost || 'localhost';
@@ -551,8 +556,6 @@ class ButlerService {
     console.log(`🔄 队列位置: ${this.taskQueue.length}`);
   }
 
-  // ... existing code for task processing ...
-
   saveConfig() {
     try {
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2), 'utf8');
@@ -605,18 +608,18 @@ class ButlerService {
     console.log('═══════════════════════════════════════');
     
     if (this.agents.size === 0) {
-      console.log('📭 暂无智能体');
+      console.log('暂无智能体');
       return;
     }
 
     this.agents.forEach(agent => {
-      console.log(`📌 ${agent.name} (${agent.id.substring(0, 8)}...)`);
+      const statusIcon = this.getStatusEmoji(agent.status);
+      console.log(`${statusIcon} ${agent.name} (${agent.id})`);
       console.log(`   角色: ${agent.role}`);
       console.log(`   模型: ${agent.model}`);
-      console.log(`   状态: ${this.getStatusEmoji(agent.status)} ${agent.status}`);
       console.log(`   能力: ${agent.capabilities.join(', ')}`);
-      console.log(`   任务数: ${agent.totalTasks || 0}`);
-      console.log(`   成功率: ${Math.round(agent.successRate || 100)}%`);
+      console.log(`   状态: ${agent.status}`);
+      console.log(`   成功率: ${agent.successRate}%`);
       console.log('');
     });
   }
@@ -631,7 +634,161 @@ class ButlerService {
     return statusEmojis[status] || '❓';
   }
 
-  // ... existing methods for task processing, metrics, etc. ...
+  showTasks() {
+    console.log('\n📋 任务列表:');
+    console.log('═══════════════════════════════════════');
+    
+    if (this.tasks.size === 0) {
+      console.log('暂无任务');
+      return;
+    }
+
+    this.tasks.forEach(task => {
+      console.log(`📝 任务ID: ${task.id}`);
+      console.log(`   描述: ${task.instruction}`);
+      console.log(`   状态: ${task.status}`);
+      console.log(`   进度: ${task.progress || 0}%`);
+      console.log('');
+    });
+  }
+
+  showMetrics() {
+    console.log('\n📊 性能指标:');
+    console.log('═══════════════════════════════════════');
+    console.log(`总处理任务数: ${this.performanceMetrics.totalTasksProcessed}`);
+    console.log(`平均完成时间: ${this.performanceMetrics.averageCompletionTime}秒`);
+    console.log(`成功率: ${this.performanceMetrics.successRate}%`);
+    console.log('\n智能体利用率:');
+    
+    this.performanceMetrics.agentUtilization.forEach((metrics, agentId) => {
+      const agent = this.agents.get(agentId);
+      if (agent) {
+        console.log(`- ${agent.name}: ${metrics.utilizationRate}%`);
+      }
+    });
+  }
+
+  showConfig() {
+    console.log('\n⚙️  配置信息:');
+    console.log('═══════════════════════════════════════');
+    console.log(`API Key: ${this.config.doubaoApiKey ? this.config.doubaoApiKey.substring(0, 10) + '...' : '未设置'}`);
+    console.log(`服务器地址: ${this.serverHost}`);
+    console.log(`最大并发任务: ${this.maxConcurrentTasks}`);
+    console.log(`任务超时时间: ${this.config.settings.taskTimeout / 1000}秒`);
+    console.log(`自动同步: ${this.config.settings.autoSync ? '开启' : '关闭'}`);
+  }
+
+  async processUserTask(instruction) {
+    console.log('\n🚀 创建新任务...');
+    const task = {
+      id: uuidv4(),
+      instruction,
+      priority: 'medium',
+      category: '通用',
+      timestamp: new Date().toISOString()
+    };
+
+    // 发送到服务器
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'new_task',
+        task
+      }));
+      console.log('✅ 任务已发送到服务器');
+    } else {
+      console.log('❌ 服务器未连接，请稍后重试');
+    }
+  }
+
+  processTaskQueue() {
+    // 处理任务队列
+    if (this.taskQueue.length === 0 || this.activeTasks.size >= this.maxConcurrentTasks) {
+      return;
+    }
+
+    const task = this.taskQueue.shift();
+    if (task) {
+      this.activeTasks.add(task.id);
+      this.executeTask(task);
+    }
+  }
+
+  async executeTask(task) {
+    console.log(`\n🔄 开始执行任务: ${task.instruction}`);
+    
+    try {
+      // 模拟任务执行
+      task.status = 'processing';
+      this.updateTaskStatus(task);
+
+      // 如果有API密钥，调用实际的AI服务
+      if (this.doubaoClient) {
+        const response = await this.doubaoClient.chat({
+          model: 'doubao-pro-4k',
+          systemPrompt: '你是一个AI助手，请帮助用户完成任务。',
+          userPrompt: task.instruction,
+          maxTokens: 2000
+        });
+        
+        task.result = response;
+        task.status = 'completed';
+      } else {
+        // 模拟处理
+        await this.delay(3000);
+        task.result = `任务 "${task.instruction}" 已完成（模拟模式）`;
+        task.status = 'completed';
+      }
+
+      console.log(`✅ 任务完成: ${task.id}`);
+      
+    } catch (error) {
+      console.error(`❌ 任务执行失败: ${error.message}`);
+      task.status = 'failed';
+      task.error = error.message;
+    } finally {
+      this.activeTasks.delete(task.id);
+      this.updateTaskStatus(task);
+      this.performanceMetrics.totalTasksProcessed++;
+    }
+  }
+
+  updateTaskStatus(task) {
+    // 向服务器发送任务状态更新
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'task_update',
+        taskId: task.id,
+        status: task.status,
+        result: task.result,
+        error: task.error
+      }));
+    }
+  }
+
+  healthCheck() {
+    // 健康检查
+    const activeAgents = Array.from(this.agents.values()).filter(a => a.status !== 'offline').length;
+    const queuedTasks = this.taskQueue.length;
+    
+    if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
+      console.log('⚠️  服务器连接已断开，尝试重连...');
+      this.connectToServer();
+    }
+
+    if (activeAgents === 0 && queuedTasks > 0) {
+      console.log('⚠️  没有可用的智能体来处理任务');
+    }
+  }
+
+  updatePerformanceMetrics() {
+    // 更新性能指标
+    this.agents.forEach((agent, agentId) => {
+      const utilization = this.performanceMetrics.agentUtilization.get(agentId);
+      if (utilization) {
+        utilization.utilizationRate = Math.round((utilization.activeTime / utilization.totalTime) * 100) || 0;
+      }
+    });
+  }
 
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));

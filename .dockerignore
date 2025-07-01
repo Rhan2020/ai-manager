@@ -99,8 +99,9 @@ jspm_packages/
 README.md
 docs/
 
-# Deployment files
-deploy/
+# Deployment files (keeping nginx configs)
+deploy/*.sh
+deploy/docker-compose.yml
 nginx/
 ssl/
 

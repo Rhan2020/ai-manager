@@ -75,7 +75,7 @@ if ! command -v node &> /dev/null; then
 fi
 
 echo "📦 安装项目依赖..."
-npm install
+npm install --legacy-peer-deps
 
 echo "🔥 停止旧服务..."
 docker-compose -f deploy/docker-compose.yml down --remove-orphans || true

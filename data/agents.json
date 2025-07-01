@@ -1,0 +1,348 @@
+{
+  "agent-1": {
+    "id": "agent-1",
+    "name": "代码助手",
+    "role": "负责代码编写和调试",
+    "status": "idle",
+    "capabilities": [
+      "编程",
+      "调试",
+      "代码审查",
+      "性能优化"
+    ],
+    "model": "doubao-pro-32k",
+    "systemPrompt": "你是一个专业的代码编写和调试专家，擅长多种编程语言和框架。请按照用户需求提供高质量的代码解决方案。",
+    "maxTokens": 4000,
+    "temperature": 0.1,
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 2.3,
+    "lastActivity": "2025-07-01T06:35:46.794Z",
+    "createdAt": "2025-07-01T06:35:46.794Z",
+    "createdBy": "system"
+  },
+  "agent-2": {
+    "id": "agent-2",
+    "name": "文档助手",
+    "role": "负责文档编写和整理",
+    "status": "idle",
+    "capabilities": [
+      "文档编写",
+      "格式化",
+      "翻译",
+      "技术写作"
+    ],
+    "model": "doubao-pro-4k",
+    "systemPrompt": "你是一个专业的技术文档编写专家，擅长将复杂的技术概念转化为清晰易懂的文档。",
+    "maxTokens": 2000,
+    "temperature": 0.3,
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 1.8,
+    "lastActivity": "2025-07-01T06:35:46.794Z",
+    "createdAt": "2025-07-01T06:35:46.794Z",
+    "createdBy": "system"
+  },
+  "agent-3": {
+    "id": "agent-3",
+    "name": "分析助手",
+    "role": "负责数据分析和报告",
+    "status": "idle",
+    "capabilities": [
+      "数据分析",
+      "报告生成",
+      "可视化",
+      "统计分析"
+    ],
+    "model": "doubao-pro-128k",
+    "systemPrompt": "你是一个专业的数据分析专家，擅长数据处理、分析和可视化报告生成。",
+    "maxTokens": 6000,
+    "temperature": 0.2,
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 4.2,
+    "lastActivity": "2025-07-01T06:35:46.794Z",
+    "createdAt": "2025-07-01T06:35:46.794Z",
+    "createdBy": "system"
+  },
+  "ce8fd03f-3e6d-47e3-880a-8ca70e46ae37": {
+    "id": "ce8fd03f-3e6d-47e3-880a-8ca70e46ae37",
+    "name": "代码智能体",
+    "role": "代码编写和调试专家",
+    "model": "doubao-pro-32k",
+    "capabilities": [
+      "编程",
+      "调试",
+      "代码审查",
+      "性能优化",
+      "架构设计"
+    ],
+    "systemPrompt": "你是一个专业的代码编写和调试专家，擅长多种编程语言和框架。请按照用户需求提供高质量的代码解决方案。",
+    "maxTokens": 2000,
+    "temperature": 0.3,
+    "status": "idle",
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 0,
+    "lastActivity": "2025-07-01T06:39:54.454Z",
+    "createdAt": "2025-07-01T06:39:54.454Z",
+    "createdBy": "user"
+  },
+  "fe70958d-5936-4eae-bd5f-1b3c00543624": {
+    "id": "fe70958d-5936-4eae-bd5f-1b3c00543624",
+    "name": "文档智能体",
+    "role": "文档编写和整理专家",
+    "model": "doubao-pro-4k",
+    "capabilities": [
+      "文档编写",
+      "技术写作",
+      "格式化",
+      "翻译",
+      "用户手册"
+    ],
+    "systemPrompt": "你是一个专业的技术文档编写专家，擅长将复杂的技术概念转化为清晰易懂的文档。请确保文档结构清晰、内容准确。",
+    "maxTokens": 2000,
+    "temperature": 0.3,
+    "status": "idle",
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 0,
+    "lastActivity": "2025-07-01T06:39:54.457Z",
+    "createdAt": "2025-07-01T06:39:54.457Z",
+    "createdBy": "user"
+  },
+  "c3ef5479-44e1-4b6c-8bfa-46cd4211badf": {
+    "id": "c3ef5479-44e1-4b6c-8bfa-46cd4211badf",
+    "name": "分析智能体",
+    "role": "数据分析和报告专家",
+    "model": "doubao-pro-128k",
+    "capabilities": [
+      "数据分析",
+      "报告生成",
+      "可视化",
+      "统计分析",
+      "趋势预测"
+    ],
+    "systemPrompt": "你是一个专业的数据分析专家，擅长数据处理、分析和可视化报告生成。请提供准确的分析结果和有价值的洞察。",
+    "maxTokens": 2000,
+    "temperature": 0.3,
+    "status": "idle",
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 0,
+    "lastActivity": "2025-07-01T06:39:54.459Z",
+    "createdAt": "2025-07-01T06:39:54.459Z",
+    "createdBy": "user"
+  },
+  "643b8b71-9308-4904-a996-787175d3d9b5": {
+    "id": "643b8b71-9308-4904-a996-787175d3d9b5",
+    "name": "测试智能体",
+    "role": "软件测试和质量保证专家",
+    "model": "doubao-pro-4k",
+    "capabilities": [
+      "测试设计",
+      "自动化测试",
+      "性能测试",
+      "安全测试",
+      "质量保证"
+    ],
+    "systemPrompt": "你是一个专业的软件测试专家，擅长设计测试用例、执行测试和质量保证工作。",
+    "maxTokens": 2000,
+    "temperature": 0.3,
+    "status": "idle",
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 0,
+    "lastActivity": "2025-07-01T06:39:54.462Z",
+    "createdAt": "2025-07-01T06:39:54.462Z",
+    "createdBy": "user"
+  },
+  "code-agent": {
+    "id": "code-agent",
+    "name": "代码智能体",
+    "role": "代码编写和调试专家",
+    "model": "doubao-pro-32k",
+    "systemPrompt": "你是一个专业的代码编写和调试专家，擅长多种编程语言和框架。请按照用户需求提供高质量的代码解决方案。",
+    "capabilities": [
+      "编程",
+      "调试",
+      "代码审查",
+      "性能优化",
+      "架构设计"
+    ],
+    "status": "idle",
+    "currentTask": null,
+    "lastActivity": "2025-07-01T07:02:06.439Z",
+    "outputs": [],
+    "metrics": {
+      "tasksCompleted": 0,
+      "averageResponseTime": 0,
+      "successRate": 100,
+      "lastResponseTime": 0
+    }
+  },
+  "32544150-3491-480c-a892-0496cb210812": {
+    "id": "32544150-3491-480c-a892-0496cb210812",
+    "name": "代码智能体",
+    "role": "代码编写和调试专家",
+    "model": "doubao-pro-32k",
+    "capabilities": [
+      "编程",
+      "调试",
+      "代码审查",
+      "性能优化",
+      "架构设计"
+    ],
+    "systemPrompt": "你是一个专业的代码编写和调试专家，擅长多种编程语言和框架。请按照用户需求提供高质量的代码解决方案。",
+    "maxTokens": 2000,
+    "temperature": 0.3,
+    "status": "idle",
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 0,
+    "lastActivity": "2025-07-01T06:40:19.086Z",
+    "createdAt": "2025-07-01T06:40:19.086Z",
+    "createdBy": "user"
+  },
+  "doc-agent": {
+    "id": "doc-agent",
+    "name": "文档智能体",
+    "role": "文档编写和整理专家",
+    "model": "doubao-pro-4k",
+    "systemPrompt": "你是一个专业的技术文档编写专家，擅长将复杂的技术概念转化为清晰易懂的文档。请确保文档结构清晰、内容准确。",
+    "capabilities": [
+      "文档编写",
+      "技术写作",
+      "格式化",
+      "翻译",
+      "用户手册"
+    ],
+    "status": "idle",
+    "currentTask": null,
+    "lastActivity": "2025-07-01T07:02:06.442Z",
+    "outputs": [],
+    "metrics": {
+      "tasksCompleted": 0,
+      "averageResponseTime": 0,
+      "successRate": 100,
+      "lastResponseTime": 0
+    }
+  },
+  "2ffb99fb-13ff-445e-888a-beda5c1dd57a": {
+    "id": "2ffb99fb-13ff-445e-888a-beda5c1dd57a",
+    "name": "文档智能体",
+    "role": "文档编写和整理专家",
+    "model": "doubao-pro-4k",
+    "capabilities": [
+      "文档编写",
+      "技术写作",
+      "格式化",
+      "翻译",
+      "用户手册"
+    ],
+    "systemPrompt": "你是一个专业的技术文档编写专家，擅长将复杂的技术概念转化为清晰易懂的文档。请确保文档结构清晰、内容准确。",
+    "maxTokens": 2000,
+    "temperature": 0.3,
+    "status": "idle",
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 0,
+    "lastActivity": "2025-07-01T06:40:19.089Z",
+    "createdAt": "2025-07-01T06:40:19.090Z",
+    "createdBy": "user"
+  },
+  "analysis-agent": {
+    "id": "analysis-agent",
+    "name": "分析智能体",
+    "role": "数据分析和报告专家",
+    "model": "doubao-pro-128k",
+    "systemPrompt": "你是一个专业的数据分析专家，擅长数据处理、分析和可视化报告生成。请提供准确的分析结果和有价值的洞察。",
+    "capabilities": [
+      "数据分析",
+      "报告生成",
+      "可视化",
+      "统计分析",
+      "趋势预测"
+    ],
+    "status": "idle",
+    "currentTask": null,
+    "lastActivity": "2025-07-01T07:02:06.444Z",
+    "outputs": [],
+    "metrics": {
+      "tasksCompleted": 0,
+      "averageResponseTime": 0,
+      "successRate": 100,
+      "lastResponseTime": 0
+    }
+  },
+  "2fc42371-93bf-4e5b-87f8-cfa2ddb48a88": {
+    "id": "2fc42371-93bf-4e5b-87f8-cfa2ddb48a88",
+    "name": "分析智能体",
+    "role": "数据分析和报告专家",
+    "model": "doubao-pro-128k",
+    "capabilities": [
+      "数据分析",
+      "报告生成",
+      "可视化",
+      "统计分析",
+      "趋势预测"
+    ],
+    "systemPrompt": "你是一个专业的数据分析专家，擅长数据处理、分析和可视化报告生成。请提供准确的分析结果和有价值的洞察。",
+    "maxTokens": 2000,
+    "temperature": 0.3,
+    "status": "idle",
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 0,
+    "lastActivity": "2025-07-01T06:40:19.092Z",
+    "createdAt": "2025-07-01T06:40:19.092Z",
+    "createdBy": "user"
+  },
+  "test-agent": {
+    "id": "test-agent",
+    "name": "测试智能体",
+    "role": "软件测试和质量保证专家",
+    "model": "doubao-pro-4k",
+    "systemPrompt": "你是一个专业的软件测试专家，擅长设计测试用例、执行测试和质量保证工作。",
+    "capabilities": [
+      "测试设计",
+      "自动化测试",
+      "性能测试",
+      "安全测试",
+      "质量保证"
+    ],
+    "status": "idle",
+    "currentTask": null,
+    "lastActivity": "2025-07-01T07:02:06.447Z",
+    "outputs": [],
+    "metrics": {
+      "tasksCompleted": 0,
+      "averageResponseTime": 0,
+      "successRate": 100,
+      "lastResponseTime": 0
+    }
+  },
+  "c80b17e0-521b-411b-b11e-bf8442928a59": {
+    "id": "c80b17e0-521b-411b-b11e-bf8442928a59",
+    "name": "测试智能体",
+    "role": "软件测试和质量保证专家",
+    "model": "doubao-pro-4k",
+    "capabilities": [
+      "测试设计",
+      "自动化测试",
+      "性能测试",
+      "安全测试",
+      "质量保证"
+    ],
+    "systemPrompt": "你是一个专业的软件测试专家，擅长设计测试用例、执行测试和质量保证工作。",
+    "maxTokens": 2000,
+    "temperature": 0.3,
+    "status": "idle",
+    "totalTasks": 0,
+    "successRate": 100,
+    "avgResponseTime": 0,
+    "lastActivity": "2025-07-01T06:40:19.097Z",
+    "createdAt": "2025-07-01T06:40:19.097Z",
+    "createdBy": "user"
+  }
+}
